@@ -17,7 +17,7 @@ class AutoSocket(object):
     def send(self, data):
         try:
             self.user_socket.send(data)
-            print("send")
+#            print("send")
         except Exception as e:
             try:
                 self.user_socket.close()

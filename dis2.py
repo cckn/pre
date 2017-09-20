@@ -18,7 +18,7 @@ socket = AutoSocket.AutoSocket("192.168.0.20", 6005)
 serial0 = serial.Serial("/dev/serial0", 921600)
 serial0.close()
 serial0.open()
-serial0.write('100 200\r\n'.encode())
+serial0.write('100 300\r\n'.encode())
 
 
 class get_warning(threading.Thread):
@@ -58,6 +58,9 @@ class set_warning(threading.Thread):
 
     def __init__(self):
         super(set_warning, self).__init__()
+        self.distance = 999
+        self.seqnum = 0
+        self.device_id = 1
 
     def report(self):
 
@@ -81,35 +84,40 @@ class set_warning(threading.Thread):
         self.frame_buff.append((int(self.distance) >> 8) & 0xff)  # DISTANCE HI
         self.frame_buff.append(int(self.distance) & 0xff)  # DISTANCE LOW
 
-        self.frame_buff.append(int(self.distance) & 0xff)  # DISTANCE LOW
+        # self.frame_buff.append(int(self.distance) & 0xff)  # DISTANCE LOW
 
         """FOOTER"""
         self.frame_buff.append(protocol.ETX)  # ETX
 
         """Update Length Field"""
         self.frame_buff[1] = self.frame_buff.__len__() - 3
-        self.socket.send(self.frame_buff)
+        socket.send(self.frame_buff)
 
-        print("DeviceID : " + str(self.device_id) + " Seq : " +
-              str(self.seqnum) + " Distance : " + str(self.distance))
+#        print("DeviceID : " + str(self.device_id) + " Seq : " +
+#              str(self.seqnum) + " Distance : " + str(self.distance))
 
     def run(self):
         while True:
-            if danger >= 35:
+            if danger >= 2:
                 print("danger")
-            elif warning >= 35:
+                self.distance = 40
+            elif warning >= 2:
                 print("warning")
-            elif none >= 35:
+                self.distance = 90
+            elif none >= 2:
                 print("none")
+                self.distance = 170
             else:
                 print("empty")
-            # print("\t\t" +
-            #       "  danger = " + str(danger) +
-            #       "  warning = " + str(warning) +
-            #       "  none = " + str(none))
+                self.distance = 250
 
+            print("\t\t" +
+                  "  danger = " + str(int(danger)) +
+                  "  warning = " + str(int(warning)) +
+                  "  none = " + str(int(none)))
+            self.report()
             count_init()
-            time.sleep(1)
+            time.sleep(0.2)
 
 
 def count_init():
