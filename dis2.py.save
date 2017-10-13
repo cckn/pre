@@ -11,7 +11,7 @@ from import_manager import AutoSocket
 from import_manager import protocol
 
 cmd = bytearray("reset\r\n", 'utf-8')
-cmd_dis = bytearray("100  2 00 \r\n ", 'utf-8')
+cmd_dis = bytearray("100  2200\r\n ", 'utf-8')
 
 
 danger = 0
@@ -19,7 +19,6 @@ warning = 0
 none = 0
 
 socket = AutoSocket.AutoSocket("192.168.0.11", 6005)
-socket1 = AutoSocket.AutoSocket("192.168.0.11", 6006)
 serial0 = serial.Serial("/dev/serial0", 921600)
 serial0.close()
 serial0.open()
@@ -40,15 +39,12 @@ class get_warning(threading.Thread):
         while True:
 
             st = str(serial0.readline())
-            # print(st)
+            print(st)
 
             if st.find("bound") != -1:
                 serial0.write(cmd_dis)
-                print("init")
-
-            elif st.find("start") != -1:
-                print("start")
-
+                time.sleep(1)
+                serial0.write(cmd_dis2)
             if st.find("Danger") != -1:
                 danger += 1
                 # print("danger :: " + str(danger))
@@ -60,6 +56,7 @@ class get_warning(threading.Thread):
             elif st.find("None") != -1:
                 none += 1
                 # print("None :: " + str(none))
+
 
 
 class set_warning(threading.Thread):
@@ -104,7 +101,6 @@ class set_warning(threading.Thread):
         """Update Length Field"""
         self.frame_buff[1] = self.frame_buff.__len__() - 3
         socket.send(self.frame_buff)
-        socket1.send(self.frame_buff)
 
 #        print("DeviceID : " + str(self.device_id) + " Seq : " +
 #              str(self.seqnum) + " Distance : " + str(self.distance))
@@ -112,25 +108,25 @@ class set_warning(threading.Thread):
     def run(self):
         while True:
             if danger >= 2:
-                print("\tdanger")
+                print("danger")
                 self.distance = 40
             elif warning >= 2:
-                print("\t\twarning")
+                print("warning")
                 self.distance = 90
             elif none >= 2:
-                print("\t\t\tnone")
+                print("none")
                 self.distance = 170
             else:
-                print("\t\t\t\tempty")
+                print("empty")
                 self.distance = 250
 
-            print("\t\t\t\t\t\t" +
+            print("\t\t" +
                   "  danger = " + str(int(danger)) +
                   "  warning = " + str(int(warning)) +
                   "  none = " + str(int(none)))
             self.report()
             count_init()
-            time.sleep(0.1)
+            time.sleep(0.2)
 
 
 def count_init():

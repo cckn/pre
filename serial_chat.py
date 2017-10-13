@@ -21,7 +21,8 @@ class cmd_input(threading.Thread):  # user input cmd recv
               colorama.Back.RESET + " :: WHITE is your cmd\n"
         while True:
             cmd = raw_input()
-            lora_serial.write(cmd + '\r\n')
+            print(cmd + '\r\n')
+            lora_serial.write(cmd + '\r\n\r\n\r\n')
 
 
 class print_rx_msg(threading.Thread):  # LoRa msg recv
