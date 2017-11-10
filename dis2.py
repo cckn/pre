@@ -5,8 +5,6 @@ import serial
 import time
 import threading
 
-# import schedule  # see https://github.com/dbader/schedule
-
 from import_manager import AutoSocket
 from import_manager import protocol
 
@@ -14,16 +12,25 @@ cmd = bytearray("reset\r\n", 'utf-8')
 cmd_dis = bytearray("100  2 00 \r\n ", 'utf-8')
 
 
+threshold = 20
+
 danger = 0
 warning = 0
 none = 0
 
-socket = AutoSocket.AutoSocket("192.168.0.11", 6005)
-socket1 = AutoSocket.AutoSocket("192.168.0.11", 6006)
-serial0 = serial.Serial("/dev/serial0", 921600)
-serial0.close()
-serial0.open()
-serial0.write(cmd)
+# monitor_socket = AutoSocket.AutoSocket("192.168.2.99", 6005)
+
+monitor_socket = AutoSocket.AutoSocket("192.168.2.6", 6005)
+#server_socket = AutoSocket.AutoSocket("192.168.2.200", 5000)
+
+sensor = serial.Serial("/dev/serial0", 921600)
+sensor.close()
+sensor.open()
+time.sleep(5)
+
+sensor.write(cmd_dis)
+
+print(cmd_dis)
 
 
 class get_warning(threading.Thread):
@@ -39,25 +46,25 @@ class get_warning(threading.Thread):
 
         while True:
 
-            st = str(serial0.readline())
+            sensor_str = str(sensor.readline())
             # print(st)
 
-            if st.find("bound") != -1:
-                serial0.write(cmd_dis)
+            if sensor_str.find("bound") != -1:
+                sensor.write(cmd_dis)
                 print("init")
 
-            elif st.find("start") != -1:
+            elif sensor_str.find("start") != -1:
                 print("start")
 
-            if st.find("Danger") != -1:
+            if sensor_str.find("Danger") != -1:
                 danger += 1
                 # print("danger :: " + str(danger))
 
-            elif st.find("Warning") != -1:
+            elif sensor_str.find("Warning") != -1:
                 warning += 1
                 # print("Warning :: " + str(warning))
 
-            elif st.find("None") != -1:
+            elif sensor_str.find("None") != -1:
                 none += 1
                 # print("None :: " + str(none))
 
@@ -73,6 +80,12 @@ class set_warning(threading.Thread):
         self.distance = 999
         self.seqnum = 0
         self.device_id = 1
+
+        self.send_ct = 999
+
+        self.danger_ct = 0
+        self.warning_ct = 0
+        self.none_ct = 0
 
     def report(self):
 
@@ -103,37 +116,43 @@ class set_warning(threading.Thread):
 
         """Update Length Field"""
         self.frame_buff[1] = self.frame_buff.__len__() - 3
-        socket.send(self.frame_buff)
-        socket1.send(self.frame_buff)
-
-#        print("DeviceID : " + str(self.device_id) + " Seq : " +
-#              str(self.seqnum) + " Distance : " + str(self.distance))
+        print(self.distance)
+        monitor_socket.send(self.frame_buff)
+        if self.send_ct > 7:
+ #           server_socket.send(self.frame_buff)
+            self.send_ct = 0
+        else:
+            self.send_ct += 1
 
     def run(self):
         while True:
-            if danger >= 2:
+            if danger >= threshold:
                 print("\tdanger")
-                self.distance = 40
-            elif warning >= 2:
+                self.distance = 3
+                self.danger_ct += 1
+            elif warning >= threshold:
                 print("\t\twarning")
-                self.distance = 90
-            elif none >= 2:
+                self.distance = 2
+                self.warning_ct += 1
+            elif none >= threshold:
                 print("\t\t\tnone")
-                self.distance = 170
+                self.distance = 1
+                self.none_ct += 1
             else:
                 print("\t\t\t\tempty")
-                self.distance = 250
+                self.distance = 0
+                self.none_ct += 1
 
             print("\t\t\t\t\t\t" +
                   "  danger = " + str(int(danger)) +
                   "  warning = " + str(int(warning)) +
                   "  none = " + str(int(none)))
             self.report()
-            count_init()
-            time.sleep(0.1)
+            count_damper()
+            time.sleep(1)
 
 
-def count_init():
+def count_damper():
     global danger
     global warning
     global none
